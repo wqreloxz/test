@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Образовательная платформа</title>
+    <style>
+        /* Строгий монохромный дизайн */
+        :root {
+            --bg-color: #000000;
+            --text-color: #FFFFFF;
+            --border-color: #333333;
+            --element-bg: #111111;
+            --hover-bg: #FFFFFF;
+            --hover-text: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h1, h2, h3 { font-weight: normal; margin-bottom: 15px; }
+        
+        input, select, textarea, button {
+            background-color: var(--element-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-size: 14px;
+            outline: none;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--hover-bg);
+            color: var(--hover-text);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+        }
+
+        /* Экраны */
+        .screen { display: none; height: 100%; }
+        .screen.active { display: flex; }
+
+        /* Авторизация */
+        #auth-screen {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-box {
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            width: 400px;
+            background-color: var(--element-bg);
+        }
+
+        /* Основное приложение */
+        #app-screen {
+            flex-direction: row;
+        }
+
+        #sidebar {
+            width: 250px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--element-bg);
+            transition: width 0.3s;
+        }
+
+        #sidebar.collapsed { width: 60px; }
+        #sidebar.collapsed .menu-text { display: none; }
+
+        .menu-btn {
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            background: none;
+            text-align: left;
+            padding: 15px;
+            margin: 0;
+        }
+
+        .menu-btn:hover {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        #content-area {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        /* Уроки и темы */
+        .topic-card {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        .topic-card:hover { border-color: var(--text-color); }
+        
+        .topic-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-top: none;
+            margin-bottom: 15px;
+            background-color: #0a0a0a;
+        }
+        .topic-content.active { display: block; }
+
+        .code-block {
+            font-family: "Courier New", Courier, monospace;
+            background-color: #050505;
+            padding: 10px;
+            border: 1px solid #222;
+            margin: 10px 0;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Экран Регистрации / Входа -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-box">
+            <h2>Вход в систему</h2>
+            <input type="text" id="fio" placeholder="ФИО">
+            <select id="role" onchange="updateRoleFields()">
+                <option value="student">Ученик</option>
+                <option value="teacher">Учитель</option>
+            </select>
+            <input type="text" id="extra-info" placeholder="Класс (например, 8А)">
+            <button onclick="login()">Войти</button>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div id="app-screen" class="screen">
+        <!-- Боковое меню -->
+        <div id="sidebar">
+            <button class="menu-btn" onclick="toggleSidebar()">[=] <span class="menu-text">Меню</span></button>
+            <div id="student-menu" style="display: none;">
+                <button class="menu-btn" onclick="switchView('diary')">> <span class="menu-text">Дневник</span></button>
+                <button class="menu-btn" onclick="switchView('tasks')">> <span class="menu-text">Задания</span></button>
+            </div>
+            <div id="teacher-menu" style="display: none;">
+                <button class="menu-btn" onclick="switchView('journal')">> <span class="menu-text">Журнал</span></button>
+                <button class="menu-btn" onclick="switchView('docs')">> <span class="menu-text">Документация</span></button>
+            </div>
+            <button class="menu-btn" onclick="switchView('config')">> <span class="menu-text">Конфигурация</span></button>
+            <button class="menu-btn" onclick="logout()" style="margin-top: auto; border-top: 1px solid #333;">> <span class="menu-text">Выход</span></button>
+        </div>
+
+        <!-- Рабочая область -->
+        <div id="content-area">
+            
+            <!-- Дневник (Ученик) -->
+            <div id="view-diary" class="view-section">
+                <h2>Дневник ученика</h2>
+                <p id="student-name-display"></p>
+                <table>
+                    <tr><th>Предмет</th><th>Оценка</th><th>Пометка</th></tr>
+                    <tr><td>Математика</td><td>8</td><td>Молодец</td></tr>
+                    <tr><td>Информатика</td><td>9</td><td>Отличный код</td></tr>
+                    <tr><td>Физика</td><td>7</td><td>Повторить формулы</td></tr>
+                </table>
+            </div>
+
+            <!-- Журнал (Учитель) -->
+            <div id="view-journal" class="view-section">
+                <h2>Журнал</h2>
+                <select><option>8А</option><option>8Б</option><option>9А</option></select>
+                <table>
+                    <tr><th>ФИО Ученика</th><th>Оценка</th><th>Действие</th></tr>
+                    <tr><td>Иванов И.И.</td><td><input type="number" min="1" max="10" value="8"></td><td><button>Сохранить</button></td></tr>
+                    <tr><td>Петров П.П.</td><td><input type="number" min="1" max="10" value="7"></td><td><button>Сохранить</button></td></tr>
+                </table>
+            </div>
+
+            <!-- Задания и Уроки (8 Класс) -->
+            <div id="view-tasks" class="view-section">
+                <h2>Учебные материалы: 8 Класс</h2>
+                
+                <select id="subject-select" onchange="filterSubjects()">
+                    <option value="math">Математика</option>
+                    <option value="informatics">Информатика</option>
+                </select>
+
+                <div id="math-topics">
+                    <!-- Тема 1 -->
+                    <div class="topic-card" onclick="toggleTopic('math-1')">1. Квадратные корни</div>
+                    <div id="math-1" class="topic-content">
+                        <h3>Арифметический квадратный корень</h3>
+                        <p>Арифметическим квадратным корнем из числа <b>a</b> называется неотрицательное число, квадрат которого равен <b>a</b>.</p>
+                        <p>Формула: y = √x. Свойства: √(a * b) = √a * √b, где a ≥ 0, b ≥ 0.</p>
+                        <br>
+                        <p><b>Задание:</b> Вычислите √144 + √25.</p>
+                        <input type="text" placeholder="Ваш ответ...">
+                        <button>Отправить</button>
+                    </div>
+
+                    <!-- Тема 2 -->
+                    <div class="topic-card" onclick="toggleTopic('math-2')">2. Квадратные уравнения и Дискриминант</div>
+                    <div id="math-2" class="topic-content">
+                        <h3>Решение через дискриминант</h3>
+                        <p>Стандартный вид: ax² + bx + c = 0 (a ≠ 0).</p>
+                        <p>Дискриминант: <b>D = b² - 4ac</b></p>
+                        <ul>
+                            <li>D > 0: Два корня: x₁,₂ = (-b ± √D) / 2a</li>
+                            <li>D = 0: Один корень: x = -b / 2a</li>
+                            <li>D < 0: Действительных корней нет.</li>
+                        </ul>
+                        <br>
+                        <p><b>Задание:</b> Найдите корни уравнения 2x² - 5x + 3 = 0.</p>
+                        <textarea rows="3" placeholder="Решение..."></textarea>
+                        <button>Отправить</button>
+                    </div>
+
+                    <!-- Тема 3 -->
+                    <div class="topic-card" onclick="toggleTopic('math-3')">3. Теорема Виета</div>
+                    <div id="math-3" class="topic-content">
+                        <h3>Теорема Виета для приведенного уравнения</h3>
+                        <p>Уравнение вида: x² + px + q = 0.</p>
+                        <p>Сумма корней: <b>x₁ + x₂ = -p</b></p>
+                        <p>Произведение корней: <b>x₁ * x₂ = q</b></p>
+                        <br>
+                        <p><b>Задание:</b> Найдите сумму и произведение корней уравнения x² - 7x + 10 = 0.</p>
+                        <input type="text" placeholder="x1+x2 = ... ; x1*x2 = ...">
+                        <button>Отправить</button>
+                    </div>
+                </div>
+
+                <div id="informatics-topics" style="display: none;">
+                    <!-- Тема 1 -->
+                    <div class="topic-card" onclick="toggleTopic('info-1')">1. Системы счисления</div>
+                    <div id="info-1" class="topic-content">
+                        <h3>Двоичная система счисления</h3>
+                        <p>Компьютеры используют двоичную систему (биты 0 и 1). Для перевода из десятичной в двоичную нужно делить число на 2 и записывать остатки.</p>
+                        <p>Пример: 5 в десятичной = 101 в двоичной.</p>
+                        <br>
+                        <p><b>Задание:</b> Переведите число 13 в двоичную систему.</p>
+                        <input type="text" placeholder="Ответ (только нули и единицы)...">
+                        <button>Отправить</button>
+                    </div>
+
+                    <!-- Тема 2 -->
+                    <div class="topic-card" onclick="toggleTopic('info-2')">2. Алгебра логики</div>
+                    <div id="info-2" class="topic-content">
+                        <h3>Базовые логические операции</h3>
+                        <p>1. Конъюнкция (И, AND): Истинна только если оба высказывания истинны (1 * 1 = 1).</p>
+                        <p>2. Дизъюнкция (ИЛИ, OR): Истинна, если хотя бы одно высказывание истинно (1 + 0 = 1).</p>
+                        <p>3. Инверсия (НЕ, NOT): Меняет значение на противоположное (НЕ 1 = 0).</p>
+                        <br>
+                        <p><b>Задание:</b> Вычислите (1 ИЛИ 0) И (НЕ 0).</p>
+                        <input type="text" placeholder="Ваш ответ...">
+                        <button>Отправить</button>
+                    </div>
+
+                    <!-- Тема 3 -->
+                    <div class="topic-card" onclick="toggleTopic('info-3')">3. Основы алгоритмизации (Python)</div>
+                    <div id="info-3" class="topic-content">
+                        <h3>Условный оператор if-else</h3>
+                        <p>Позволяет выполнять разные блоки кода в зависимости от условия.</p>
+                        <div class="code-block">
+x = 10
+if x > 0:
+    print("Положительное")
+else:
+    print("Отрицательное или ноль")
+                        </div>
+                        <br>
+                        <p><b>Задание:</b> Напишите код на Python, который проверяет, четное ли число a.</p>
+                        <textarea rows="5" placeholder="Ввод кода..."></textarea>
+                        <button>Отправить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Документация (Учитель) -->
+            <div id="view-docs" class="view-section">
+                <h2>Документация к уроку</h2>
+                <select><option>Математика (8 Класс)</option><option>Информатика (8 Класс)</option></select>
+                <textarea rows="10" placeholder="Текст лекции или материалы урока..."></textarea>
+                <button>Сохранить материал</button>
+                <button style="margin-top: 10px;">Загрузить файл</button>
+            </div>
+
+            <!-- Конфигурация (Общая) -->
+            <div id="view-config" class="view-section">
+                <h2>Конфигурация</h2>
+                <p>Язык интерфейса:</p>
+                <select>
+                    <option>Русский</option>
+                    <option>Беларуская</option>
+                </select>
+                <br>
+                <label style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                    <input type="checkbox" style="width: auto;"> Увеличение текста (Специальные возможности)
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                    <input type="checkbox" style="width: auto;"> Аудио текст (Озвучивание заданий)
+                </label>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Обновление поля при смене роли
+        function updateRoleFields() {
+            const role = document.getElementById('role').value;
+            const extraInput = document.getElementById('extra-info');
+            
+            if (role === 'student') {
+                extraInput.placeholder = "Класс (например, 8А)";
+            } else {
+                extraInput.placeholder = "Какой предмет (через запятую)";
+            }
+        }
+
+        // Логика авторизации
+        function login() {
+            const role = document.getElementById('role').value;
+            const fio = document.getElementById('fio').value || 'Неизвестный Пользователь';
+            
+            document.getElementById('auth-screen').classList.remove('active');
+            document.getElementById('app-screen').classList.add('active');
+
+            // Настройка интерфейса под роль
+            if (role === 'student') {
+                document.getElementById('student-menu').style.display = 'block';
+                document.getElementById('teacher-menu').style.display = 'none';
+                document.getElementById('student-name-display').innerText = "Ученик: " + fio;
+                switchView('diary');
+            } else {
+                document.getElementById('student-menu').style.display = 'none';
+                document.getElementById('teacher-menu').style.display = 'block';
+                switchView('journal');
+            }
+        }
+
+        function logout() {
+            document.getElementById('app-screen').classList.remove('active');
+            document.getElementById('auth-screen').classList.add('active');
+        }
+
+        // Навигация
+        function switchView(viewId) {
+            const views = document.querySelectorAll('.view-section');
+            views.forEach(view => view.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+        }
+
+        // Боковое меню (бургер)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        // Фильтрация предметов (Информатика / Математика)
+        function filterSubjects() {
+            const subject = document.getElementById('subject-select').value;
+            if (subject === 'math') {
+                document.getElementById('math-topics').style.display = 'block';
+                document.getElementById('informatics-topics').style.display = 'none';
+            } else {
+                document.getElementById('math-topics').style.display = 'none';
+                document.getElementById('informatics-topics').style.display = 'block';
+            }
+        }
+
+        // Раскрытие тем
+        function toggleTopic(topicId) {
+            const element = document.getElementById(topicId);
+            element.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
